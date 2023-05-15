@@ -1,4 +1,4 @@
-# DontFenceMeIn
+# Don't Fence Me In
 A bare-bones Command & Control program I'm making in my spare time, following the Python C2 guide from @joehelle on Twitter.
 
 # Full Course
