@@ -1,5 +1,5 @@
 # Don't Fence Me In
-A bare-bones Command & Control program I'm making in my spare time, following the Python C2 guide from @joehelle on Twitter. This is primarily a learningexperience for building large-scale projects, along with developing an understanding of C2 malware and a further understanding of Python Socket applications.
+A bare-bones Command & Control program I'm making in my spare time, following the Python C2 guide from @joehelle on Twitter. This is primarily a learning experience for building large-scale projects, along with developing an understanding of C2 malware and a further understanding of Python Socket applications.
 
 # Full Course
 https://ko-fi.com/s/0c3776a2a0
